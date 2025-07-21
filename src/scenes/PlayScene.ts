@@ -29,6 +29,7 @@ class PlayScene extends GameScene {
         this.createPlayer();
         this.createObstacles();
         this.createGameOverContainers();
+        this.createAnimation();
 
         this.handleGameStart();
         this.handleObstacleCollisions();
@@ -48,6 +49,7 @@ class PlayScene extends GameScene {
         }
 
         Phaser.Actions.IncX(this.obstacles.getChildren(), -this.gameSpeed);
+        
         this.obstacles.getChildren().forEach((obstacle: SpriteWithDynamicBody) => {
             if (obstacle.getBounds().right < 0) {
                 this.obstacles.remove(obstacle);
@@ -82,15 +84,37 @@ class PlayScene extends GameScene {
             .setAlpha(0);
     }
 
+    createAnimation() {
+        this.anims.create({
+            key: "enemy-bird-fly",
+            frames: this.anims.generateFrameNumbers("enemy-bird"),
+            frameRate: 6,
+            repeat: -1
+        })
+    }
+
     spawnObstacle() {
-        const obstacleNum = Math.floor(Math.random() * PRELOAD_CONFIG.cactusesCount) + 1;
-        const distance = Phaser.Math.Between(600, 900);
+        const obstaclesCount = PRELOAD_CONFIG.cactusesCount + PRELOAD_CONFIG.birdsCount;
+        const obstacleNum = Math.floor(Math.random() * obstaclesCount) + 1;
+        // const obstaclesNum = 7;
 
-        const obstacle = this.obstacles
-            .create(distance, this.gameHeight, `obstacle-${obstacleNum}`)
+        const distance = Phaser.Math.Between(150, 300);
+        let obstacle;
+
+        if (obstacleNum > PRELOAD_CONFIG.cactusesCount) {
+            const enemyPossibleHeight = [20, 70];
+            const enemyHeight = enemyPossibleHeight[Math.floor(Math.random() * 2)]
+
+            obstacle = this.obstacles.create(this.gameWidth + distance, this.gameHeight - enemyHeight, `enemy-bird`)
+            obstacle.play("enemy-bird-fly", true)
+
+        } else {
+            obstacle = this.obstacles.create(this.gameWidth + distance, this.gameHeight, `obstacle-${obstacleNum}`)
+        }
+
+        obstacle
             .setOrigin(0, 1)
-            .setImmovable()
-
+            .setImmovable();
     }
 
     handleGameStart() {
@@ -132,11 +156,11 @@ class PlayScene extends GameScene {
         this.restartText.on("pointerdown", () => {
             this.physics.resume();
             this.player.setVelocityY(0);
-            
+
             this.obstacles.clear(true, true);
             this.gameOverContainer.setAlpha(0);
             this.anims.resumeAll();
-            
+
             this.isGameRunning = true;
         });
     }
@@ -145,6 +169,7 @@ class PlayScene extends GameScene {
         this.physics.add.collider(this.obstacles, this.player, () => {
             this.isGameRunning = false;
             this.physics.pause();
+            this.anims.pauseAll();
 
             this.player.die();
             this.gameOverContainer.setAlpha(1);
